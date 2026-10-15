@@ -42,6 +42,10 @@ EN = {
     "Найден eboot.bin": "eboot.bin found",
     "Нет eboot.bin в папке": "No eboot.bin in the folder",
     "Управление": "Controls",
+    "Шаг (удерживать)": "Walk (hold)",
+    "Значки кнопок в игре": "In-game button icons",
+    "Применяется при запуске игры": "Applied when the game starts",
+    "Геймпад, как в игре": "Gamepad, as in the game",
     "Клавиатура": "Keyboard",
     "Геймпад": "Gamepad",
     "Назначение кнопок; применяется при запуске игры": "Button assignments; applied when the game starts",
@@ -333,6 +337,12 @@ EN = {
 }
 
 PT_BR = {
+    # Controls: walking on the keyboard, in-game button icons
+    "Шаг (удерживать)": "Caminhar (segurar)",
+    "Значки кнопок в игре": "Ícones dos botões no jogo",
+    "Применяется при запуске игры": "Aplicado ao iniciar o jogo",
+    "Клавиатура и мышь": "Teclado e mouse",
+    "Геймпад, как в игре": "Controle, como no jogo",
     # Window, pages, buttons
     "Запустить": "Jogar",
     "Остановить": "Parar",
@@ -578,6 +588,10 @@ ZH_CN = {
     "Найден eboot.bin": "已找到 eboot.bin",
     "Нет eboot.bin в папке": "文件夹中没有 eboot.bin",
     "Управление": "操作设置",
+    "Шаг (удерживать)": "行走（按住）",
+    "Значки кнопок в игре": "游戏内按键图标",
+    "Применяется при запуске игры": "在游戏启动时生效",
+    "Геймпад, как в игре": "手柄（游戏原样）",
     "Клавиатура": "键盘",
     "Геймпад": "手柄",
     "Назначение кнопок; применяется при запуске игры": "按键绑定；在游戏启动时生效",

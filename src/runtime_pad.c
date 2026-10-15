@@ -1,15 +1,16 @@
 /* libScePad on SDL3 gamepads and the keyboard. SDL events are pumped by the window thread
  * (gpu/shim/window.cpp); here state is only sampled.
  *
- * Keyboard layout (also with a gamepad connected: both drive the game):
- *   WASD left stick, arrow keys right stick, Space Cross, LShift Circle,
- *   E Square, Q Triangle, 1 L1, 3 R1, R L2, F R2, Z L3, C R3,
- *   Enter Options, Tab left touchpad, Backspace right touchpad,
- *   IJKL d-pad (I up, K down, J left, L right).
- *   Mouse: while looking, Left is R1, Right is L2, Middle is R3, side buttons are R2 (X1) and
- *   L1 (X2), and the wheel is the d-pad up/down (quick items). In a menu the cursor shows on
- *   its own: it moves the highlight onto the row under it, left click confirms, right click
- *   goes back. F1 frees the cursor during play.
+ * Keyboard layout, as Dark Souls 3 on PC (also with a gamepad connected: both drive the game):
+ *   WASD left stick (Left Alt held: walk), the mouse the right stick, arrow keys d-pad,
+ *   Space and Q Circle (dodge, run, back), E Cross, R Square, F Triangle, X L3, C R3,
+ *   Esc Options, G left touchpad (gestures), Tab right touchpad, Shift+arrows the menus' L1
+ *   (left), R1 (right), L2 (up), R2 (down).
+ *   Mouse: while looking, Left is R1, Shift+Left R2, Right L2, Shift+Right L1, Middle R3, side
+ *   buttons R2 (X1) and L1 (X2), and the wheel is the d-pad up/down (quick items). With Shift
+ *   held, a key or button that has a Shift+ binding gives only that one. In a menu the cursor
+ *   shows on its own: it moves the highlight onto the row under it, left click confirms, right
+ *   click goes back. F1 frees the cursor during play.
  *
  * Stick neutral: SDL exposes no way to read a pad's calibration and some clones report a
  * biased neutral (a Switch-style pad was seen returning both sticks at a constant ~ +/-16380).
@@ -275,20 +276,22 @@ static void report_guest_heap(void) {
  * key.<input>=<SDL key names> and pad.<input>=<SDL gamepad button names>, comma-separated,
  * replace an input's binding (empty: unbound). Inputs: the buttons (cross ... right, touchpad =
  * a left-side click, touchpad_right), and on the keyboard the sticks: move_* (left), look_*
- * (right). Gamepad names as SDL's: a b x y back start leftstick rightstick leftshoulder
- * rightshoulder dpup dpdown dpleft dpright touchpad misc1 paddle1-4, plus lefttrigger and
- * righttrigger. The keyboard works next to a gamepad (the Steam Deck always has one): its buttons
- * add to the gamepad's, a held move/look key moves the stick all the way. */
+ * (right), and walk (held: the left stick at walking travel). Gamepad names as SDL's: a b x y
+ * back start leftstick rightstick leftshoulder rightshoulder dpup dpdown dpleft dpright touchpad
+ * misc1 paddle1-4, plus lefttrigger and righttrigger. The keyboard works next to a gamepad (the
+ * Steam Deck always has one): its buttons add to the gamepad's, a held move/look key moves the
+ * stick all the way. A key name may carry "Shift+" (either Shift held): Shift+Mouse Left,
+ * Shift+Left. */
 enum {
     IN_CROSS, IN_CIRCLE, IN_SQUARE, IN_TRIANGLE, IN_L1, IN_R1, IN_L2, IN_R2, IN_L3, IN_R3,
     IN_OPTIONS, IN_TOUCHPAD, IN_TOUCHPAD_RIGHT, IN_UP, IN_DOWN, IN_LEFT, IN_RIGHT,
     IN_MOVE_UP, IN_MOVE_DOWN, IN_MOVE_LEFT, IN_MOVE_RIGHT, IN_LOOK_UP, IN_LOOK_DOWN, IN_LOOK_LEFT,
-    IN_LOOK_RIGHT, IN_COUNT
+    IN_LOOK_RIGHT, IN_WALK, IN_COUNT
 };
 static const char *const input_names[IN_COUNT]={
     "cross","circle","square","triangle","l1","r1","l2","r2","l3","r3","options","touchpad",
     "touchpad_right","up","down","left","right","move_up","move_down","move_left","move_right",
-    "look_up","look_down","look_left","look_right",
+    "look_up","look_down","look_left","look_right","walk",
 };
 static const uint32_t input_buttons[IN_COUNT]={
     BTN_CROSS,BTN_CIRCLE,BTN_SQUARE,BTN_TRIANGLE,BTN_L1,BTN_R1,BTN_L2,BTN_R2,BTN_L3,BTN_R3,
@@ -305,22 +308,29 @@ static const struct { const char *name; int code; } mouse_keys[]={
     {"Mouse X2",MOUSE_KEY+SDL_BUTTON_X2}, {"Wheel Up",MOUSE_WHEEL_UP}, {"Wheel Down",MOUSE_WHEEL_DOWN},
 };
 enum { PAD_LEFT_TRIGGER=SDL_GAMEPAD_BUTTON_COUNT, PAD_RIGHT_TRIGGER }; /* triggers as buttons */
+/* "Shift+<key>": the key's code with this bit. A key with a Shift+ binding anywhere (chord_base)
+ * gives only its Shift+ inputs while Shift is held, so Shift+Mouse Left is R2 and not R1 too. */
+#define KEY_SHIFT 0x10000
 typedef struct { int key_count, pad_count; int keys[MAX_BIND]; int pad[MAX_BIND]; } Binding;
 static Binding bindings[IN_COUNT];
+static bool chord_base[MOUSE_WHEEL_DOWN+1];
 static int bindings_ready;
 
 static void bind_defaults(void) {
     static const struct { int input; int key; } keys[]={
-        {IN_CROSS,SDL_SCANCODE_SPACE}, {IN_CIRCLE,SDL_SCANCODE_LSHIFT}, {IN_SQUARE,SDL_SCANCODE_E},
-        {IN_TRIANGLE,SDL_SCANCODE_Q}, {IN_L1,SDL_SCANCODE_1}, {IN_R1,SDL_SCANCODE_3},
-        {IN_L2,SDL_SCANCODE_R}, {IN_R2,SDL_SCANCODE_F}, {IN_L3,SDL_SCANCODE_Z}, {IN_R3,SDL_SCANCODE_C},
-        {IN_OPTIONS,SDL_SCANCODE_RETURN}, {IN_TOUCHPAD,SDL_SCANCODE_TAB},
-        {IN_TOUCHPAD_RIGHT,SDL_SCANCODE_BACKSPACE},
-        {IN_UP,SDL_SCANCODE_I}, {IN_DOWN,SDL_SCANCODE_K}, {IN_LEFT,SDL_SCANCODE_J}, {IN_RIGHT,SDL_SCANCODE_L},
+        {IN_CROSS,SDL_SCANCODE_E}, {IN_CIRCLE,SDL_SCANCODE_SPACE}, {IN_CIRCLE,SDL_SCANCODE_Q},
+        {IN_SQUARE,SDL_SCANCODE_R}, {IN_TRIANGLE,SDL_SCANCODE_F},
+        {IN_L1,KEY_SHIFT|SDL_SCANCODE_LEFT}, {IN_R1,KEY_SHIFT|SDL_SCANCODE_RIGHT},
+        {IN_L2,KEY_SHIFT|SDL_SCANCODE_UP}, {IN_R2,KEY_SHIFT|SDL_SCANCODE_DOWN},
+        {IN_L3,SDL_SCANCODE_X}, {IN_R3,SDL_SCANCODE_C},
+        {IN_OPTIONS,SDL_SCANCODE_ESCAPE}, {IN_TOUCHPAD,SDL_SCANCODE_G},
+        {IN_TOUCHPAD_RIGHT,SDL_SCANCODE_TAB},
+        {IN_UP,SDL_SCANCODE_UP}, {IN_DOWN,SDL_SCANCODE_DOWN}, {IN_LEFT,SDL_SCANCODE_LEFT},
+        {IN_RIGHT,SDL_SCANCODE_RIGHT},
         {IN_MOVE_UP,SDL_SCANCODE_W}, {IN_MOVE_DOWN,SDL_SCANCODE_S}, {IN_MOVE_LEFT,SDL_SCANCODE_A},
-        {IN_MOVE_RIGHT,SDL_SCANCODE_D}, {IN_LOOK_UP,SDL_SCANCODE_UP}, {IN_LOOK_DOWN,SDL_SCANCODE_DOWN},
-        {IN_LOOK_LEFT,SDL_SCANCODE_LEFT}, {IN_LOOK_RIGHT,SDL_SCANCODE_RIGHT},
-        {IN_R1,MOUSE_KEY+SDL_BUTTON_LEFT}, {IN_L2,MOUSE_KEY+SDL_BUTTON_RIGHT},
+        {IN_MOVE_RIGHT,SDL_SCANCODE_D}, {IN_WALK,SDL_SCANCODE_LALT},
+        {IN_R1,MOUSE_KEY+SDL_BUTTON_LEFT}, {IN_R2,KEY_SHIFT|(MOUSE_KEY+SDL_BUTTON_LEFT)},
+        {IN_L2,MOUSE_KEY+SDL_BUTTON_RIGHT}, {IN_L1,KEY_SHIFT|(MOUSE_KEY+SDL_BUTTON_RIGHT)},
         {IN_R3,MOUSE_KEY+SDL_BUTTON_MIDDLE}, {IN_R2,MOUSE_KEY+SDL_BUTTON_X1}, {IN_L1,MOUSE_KEY+SDL_BUTTON_X2},
         {IN_UP,MOUSE_WHEEL_UP}, {IN_DOWN,MOUSE_WHEEL_DOWN},
     };
@@ -350,6 +360,10 @@ static int pad_button_from_name(const char *name) {
     return b==SDL_GAMEPAD_BUTTON_INVALID ? -1 : (int)b;
 }
 static int key_from_name(const char *name) {
+    if (!SDL_strncasecmp(name,"Shift+",6)) {
+        const int base=key_from_name(name+6);
+        return base<0 || (base & KEY_SHIFT) ? -1 : base|KEY_SHIFT;
+    }
     for (size_t i=0;i<sizeof(mouse_keys)/sizeof(*mouse_keys);++i)
         if (!SDL_strcasecmp(name,mouse_keys[i].name)) return mouse_keys[i].code;
     const SDL_Scancode s=SDL_GetScancodeFromName(name);
@@ -362,13 +376,19 @@ static int key_from_name(const char *name) {
 static int mouse_look=1, mouse_invert_y, mouse_look_v2=1;
 static float mouse_sensitivity=1.0f;
 static void mouse_look_v2_from_env(void);
+static void mark_chords(void) {
+    memset(chord_base,0,sizeof chord_base);
+    for (int i=0;i<IN_COUNT;++i)
+        for (int j=0;j<bindings[i].key_count;++j)
+            if (bindings[i].keys[j] & KEY_SHIFT) chord_base[bindings[i].keys[j] & ~KEY_SHIFT]=true;
+}
 /* key.<input>= / pad.<input>= lines of the settings file. */
 static void load_bindings(void) {
     bind_defaults();
     mouse_look=1; mouse_invert_y=0; mouse_sensitivity=1.0f; mouse_look_v2=1;
     const char *path=getenv("BB_CONFIG");
     FILE *f=path ? fopen(path,"r") : NULL;
-    if (!f) { mouse_look_v2_from_env(); return; }
+    if (!f) { mouse_look_v2_from_env(); mark_chords(); return; }
     char line[512];
     while (fgets(line,sizeof line,f)) {
         const int keyboard=!strncmp(line,"key.",4), pad=!strncmp(line,"pad.",4);
@@ -407,6 +427,7 @@ static void load_bindings(void) {
     }
     fclose(f);
     mouse_look_v2_from_env();
+    mark_chords();
 }
 static void mouse_look_v2_from_env(void) {
     const char *mode=getenv("BB_MOUSE_LOOK_V2");
@@ -469,8 +490,10 @@ static int mouse_key_down(int code) {
     return (mouse_buttons & SDL_BUTTON_MASK(code-MOUSE_KEY))!=0;
 }
 static int key_down(const bool *k, int input) {
+    const int shift=k && (k[SDL_SCANCODE_LSHIFT] || k[SDL_SCANCODE_RSHIFT]);
     for (int i=0;i<bindings[input].key_count;++i) {
-        const int code=bindings[input].keys[i];
+        const int code=bindings[input].keys[i] & ~KEY_SHIFT;
+        if (bindings[input].keys[i] & KEY_SHIFT ? !shift : shift && chord_base[code]) continue;
         if (code>=MOUSE_KEY ? mouse_key_down(code) : k && k[code]) return 1;
     }
     return 0;
@@ -494,6 +517,57 @@ static uint8_t key_axis(uint8_t value, int negative, int positive) {
     if (negative && positive) return value;
     return negative || positive ? (uint8_t)(128-(negative ? 128 : 0)+(positive ? 127 : 0)) : value;
 }
+/* -1..1 as a stick byte: 0 all the way negative, 255 all the way positive, as key_axis. */
+static uint8_t stick_byte(float v) {
+    const float b=v<0 ? 128.0f+v*128.0f : 128.0f+v*127.0f;
+    return (uint8_t)(b<0 ? 0 : b>255 ? 255 : b+0.5f);
+}
+/* The left stick from the move keys, as a thumb sweeps a stick. Opposite keys: the last pressed
+ * wins (A held, then D: right), never the neutral stick. The direction turns toward the keys at
+ * KEY_TURN_RATE instead of jumping, and no key for less than KEY_RELEASE_US (between releasing one
+ * key and pressing the next) keeps it. A neutral stick ends a run in the game, so without these a
+ * change of direction stopped the run and snapped the character around. walk (Left Alt, as Dark
+ * Souls 3) holds the stick at KEY_WALK of its travel. Returns 0 when no move key is in play. */
+#define KEY_TURN_RATE (6.0f*SDL_PI_F) /* rad/s: 1080 degrees a second, a reversal in ~170 ms */
+#define KEY_RELEASE_US 80000
+#define KEY_WALK 0.4f
+static uint64_t move_pressed_us[4], move_last_us, move_released_us; /* up, down, left, right */
+static float move_angle;
+static int move_active;
+static int apply_keyboard_move(PadData *d, const bool *k) {
+    const uint64_t now=d->timestamp;
+    int held[4];
+    for (int i=0;i<4;++i) {
+        held[i]=key_down(k,IN_MOVE_UP+i);
+        if (!held[i]) move_pressed_us[i]=0;
+        else if (!move_pressed_us[i]) move_pressed_us[i]=now;
+    }
+    const int y=held[0] && held[1] ? (move_pressed_us[0]>=move_pressed_us[1] ? -1 : 1)
+              : held[0] ? -1 : held[1] ? 1 : 0;
+    const int x=held[2] && held[3] ? (move_pressed_us[2]>=move_pressed_us[3] ? -1 : 1)
+              : held[2] ? -1 : held[3] ? 1 : 0;
+    const float dt=move_last_us && now>move_last_us ? (float)(now-move_last_us)*1e-6f : 0.0f;
+    move_last_us=now;
+    if (!x && !y) {
+        if (!move_active) return 0;
+        if (!move_released_us) move_released_us=now;
+        if (now-move_released_us>=KEY_RELEASE_US) { move_active=0; move_released_us=0; return 0; }
+    } else {
+        move_released_us=0;
+        const float target=SDL_atan2f((float)y,(float)x);
+        if (!move_active || dt<=0.0f || dt>0.1f) move_angle=target;
+        else {
+            float delta=SDL_fmodf(target-move_angle+3.0f*SDL_PI_F,2.0f*SDL_PI_F)-SDL_PI_F;
+            const float step=KEY_TURN_RATE*dt;
+            move_angle=SDL_fabsf(delta)<=step ? target : move_angle+(delta>0 ? step : -step);
+        }
+        move_active=1;
+    }
+    const float travel=key_down(k,IN_WALK) ? KEY_WALK : 1.0f;
+    d->left_x=stick_byte(SDL_cosf(move_angle)*travel);
+    d->left_y=stick_byte(SDL_sinf(move_angle)*travel);
+    return 1;
+}
 static void apply_keyboard(PadData *d, const bool *k) {
     for (int i=IN_CROSS;i<=IN_RIGHT;++i)
         if (i!=IN_TOUCHPAD && i!=IN_TOUCHPAD_RIGHT && key_down(k,i)) d->buttons|=input_buttons[i];
@@ -501,8 +575,7 @@ static void apply_keyboard(PadData *d, const bool *k) {
     if (key_down(k,IN_TOUCHPAD_RIGHT)) touch_click(d,1);
     if (key_down(k,IN_L2)) d->l2=255;
     if (key_down(k,IN_R2)) d->r2=255;
-    d->left_x=key_axis(d->left_x,key_down(k,IN_MOVE_LEFT),key_down(k,IN_MOVE_RIGHT));
-    d->left_y=key_axis(d->left_y,key_down(k,IN_MOVE_UP),key_down(k,IN_MOVE_DOWN));
+    apply_keyboard_move(d,k);
     d->right_x=key_axis(d->right_x,key_down(k,IN_LOOK_LEFT),key_down(k,IN_LOOK_RIGHT));
     d->right_y=key_axis(d->right_y,key_down(k,IN_LOOK_UP),key_down(k,IN_LOOK_DOWN));
 }

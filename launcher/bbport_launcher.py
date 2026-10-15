@@ -112,6 +112,9 @@ DRAW_PIPE = [("Авто", "", "Включён при 8 и более поток�
 LANGUAGES = [("Английский", "1"), ("Русский", "8"), ("Японский", "0"), ("Французский", "2"),
              ("Испанский", "3"), ("Немецкий", "4"), ("Итальянский", "5")]
 LIVE_RESOLUTION = [("Авто (по видеокарте)", "auto"), ("Выключена (быстрее)", "0"), ("Включена", "1")]
+# The game's button prompts (builtin_mods/kbm_icons, tools/kbm_icons.py): keyboard and mouse keys by
+# default, the original gamepad pictures otherwise.
+BUTTON_ICONS = [("Клавиатура и мышь", "kbm"), ("Геймпад, как в игре", "pad")]
 READBACKS = [("Relaxed", "", "По умолчанию"), ("Выключены", "0"), ("Precise", "2")]
 # Background pre-upload of the game's GPU memory into VRAM (BB_PREUPLOAD): auto = on with a discrete GPU.
 PREUPLOAD = [("Обычная", "", "Без лишней видеопамяти"), ("Полная", "2", "Около 3 ГБ видеопамяти сверху"),
@@ -130,6 +133,7 @@ DEFAULTS = {
     "present_mode": "Mailbox",
     "gamepad": "",
     "gamepad_name": "",
+    "button_icons": "kbm",
     "display": "",
     "skip_network_choice": True,
     "fps_mode": "uncap",
@@ -297,6 +301,9 @@ def game_environment(s):
     env["BB_MODS_DIR"] = str(Path(s.get("mods_dir") or DATA_DIR / "mods").expanduser())
     env["BB_MODS_CONFIG"] = str(DATA_DIR / "mods.json")
     env["BB_MODS_ENABLED"] = "1" if s.get("mods_enabled", True) else "0"
+    # Built-in mods load first (a mod of the player's still replaces their files), mods on or off.
+    env["BB_BUILTIN_MODS"] = str(PORT_DIR / "builtin_mods" / "kbm_icons") \
+        if s.get("button_icons", "kbm") == "kbm" else ""
     env["BB_PATCHES_DIR"] = str(patches_dir(s))
     env["BB_PATCHES_CONFIG"] = str(DATA_DIR / "patches.json")
     env["BB_LANGUAGE"] = s["language"]
@@ -401,32 +408,35 @@ def combo_value(row):
 # Controls (runtime_pad.c): input, label, default keyboard keys, default gamepad buttons (SDL names).
 # bbport.ini key.<input>= / pad.<input>= replace a default; no line keeps it. Mouse buttons and the
 # wheel are keys ("Mouse Left", "Wheel Down"); they act while the game holds the mouse.
+# The defaults are Dark Souls 3's PC layout. "Shift+" keys count only with Shift held, and a key
+# that has one gives only that one while Shift is held.
 CONTROLS = [
-    ("cross", "Крест", "Space", "a"),
-    ("circle", "Круг", "Left Shift", "b"),
-    ("square", "Квадрат", "E", "x"),
-    ("triangle", "Треугольник", "Q", "y"),
-    ("l1", "L1", "1, Mouse X2", "leftshoulder"),
-    ("r1", "R1", "3, Mouse Left", "rightshoulder"),
-    ("l2", "L2", "R, Mouse Right", "lefttrigger"),
-    ("r2", "R2", "F, Mouse X1", "righttrigger"),
-    ("l3", "L3", "Z", "leftstick"),
+    ("cross", "Крест", "E", "a"),
+    ("circle", "Круг", "Space, Q", "b"),
+    ("square", "Квадрат", "R", "x"),
+    ("triangle", "Треугольник", "F", "y"),
+    ("l1", "L1", "Shift+Left, Shift+Mouse Right, Mouse X2", "leftshoulder"),
+    ("r1", "R1", "Shift+Right, Mouse Left", "rightshoulder"),
+    ("l2", "L2", "Shift+Up, Mouse Right", "lefttrigger"),
+    ("r2", "R2", "Shift+Down, Shift+Mouse Left, Mouse X1", "righttrigger"),
+    ("l3", "L3", "X", "leftstick"),
     ("r3", "R3", "C, Mouse Middle", "rightstick"),
-    ("options", "Options", "Return", "start"),
-    ("touchpad", "Тачпад, левая половина (жесты)", "Tab", "back, touchpad"),
-    ("touchpad_right", "Тачпад, правая половина (личные вещи)", "Backspace", ""),
-    ("up", "Крестовина вверх", "I, Wheel Up", "dpup"),
-    ("down", "Крестовина вниз", "K, Wheel Down", "dpdown"),
-    ("left", "Крестовина влево", "J", "dpleft"),
-    ("right", "Крестовина вправо", "L", "dpright"),
+    ("options", "Options", "Escape", "start"),
+    ("touchpad", "Тачпад, левая половина (жесты)", "G", "back, touchpad"),
+    ("touchpad_right", "Тачпад, правая половина (личные вещи)", "Tab", ""),
+    ("up", "Крестовина вверх", "Up, Wheel Up", "dpup"),
+    ("down", "Крестовина вниз", "Down, Wheel Down", "dpdown"),
+    ("left", "Крестовина влево", "Left", "dpleft"),
+    ("right", "Крестовина вправо", "Right", "dpright"),
     ("move_up", "Движение вперёд", "W", None),
     ("move_down", "Движение назад", "S", None),
     ("move_left", "Движение влево", "A", None),
     ("move_right", "Движение вправо", "D", None),
-    ("look_up", "Камера вверх", "Up", None),
-    ("look_down", "Камера вниз", "Down", None),
-    ("look_left", "Камера влево", "Left", None),
-    ("look_right", "Камера вправо", "Right", None),
+    ("walk", "Шаг (удерживать)", "Left Alt", None),
+    ("look_up", "Камера вверх", "", None),
+    ("look_down", "Камера вниз", "", None),
+    ("look_left", "Камера влево", "", None),
+    ("look_right", "Камера вправо", "", None),
 ]
 
 
@@ -642,6 +652,9 @@ class LauncherWindow(Adw.ApplicationWindow):
                                                 lambda _button: self.fill_gamepads()))
         self.fill_gamepads()
         controls.add(self.gamepad_row)
+        self.button_icons_row = combo_row(tr("Значки кнопок в игре"), tr("Применяется при запуске игры"),
+                                          BUTTON_ICONS, self.settings.get("button_icons", "kbm"))
+        controls.add(self.button_icons_row)
         # Bindings: "Assign" waits for a key or button (bb-gpu-capabilities --read-input).
         self.control_rows = {}
         for kind, title, icon in (("key", tr("Клавиатура и мышь"), "input-keyboard-symbolic"),
@@ -1024,6 +1037,7 @@ class LauncherWindow(Adw.ApplicationWindow):
         s = self.settings
         s["gamepad"] = combo_value(self.gamepad_row)
         s["gamepad_name"] = self.gamepad_row.names[self.gamepad_row.get_selected()]
+        s["button_icons"] = combo_value(self.button_icons_row)
         s["display"] = combo_value(self.display_row)
         s["skip_network_choice"] = self.skip_network_row.get_active()
         s["language"] = combo_value(self.language_row)

@@ -173,8 +173,15 @@ def main():
     parser.add_argument('--mods-dir', required=True, type=Path)
     parser.add_argument('--config', type=Path)
     parser.add_argument('--enabled', choices=('0', '1'), default='1')
+    parser.add_argument('--builtin', default='',
+                        help="the port's own mods (builtin_mods/...), os.pathsep-separated; they load "
+                             "first, whether the player's mods are on or not")
     args = parser.parse_args()
     layers = []
+    for path in filter(None, args.builtin.split(os.pathsep)):
+        if content_root(path) is None:
+            raise ValueError(f'Built-in mod without game files: {path}')
+        layers.append((Path(path).name, Path(path)))
     if args.enabled == '1':
         # shadPS4's loose overlay convention, beside the original game.
         legacy = Path(str(args.game.resolve()) + '-mods')
