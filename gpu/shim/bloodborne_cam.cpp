@@ -21,6 +21,21 @@ static constexpr uintptr_t ADDR_CAM_NOP2_ORIG = 0x80143C984;
 static constexpr uintptr_t ADDR_CAM_NOP3_ORIG = 0x80143DDE6;
 static constexpr uintptr_t ADDR_CAM_NOP4_ORIG = 0x80143C870;
 static constexpr uintptr_t MONOCULAR_BASE_ORIG = 0x80553E8D0;
+// The game visibly corrects pitch beyond its physical free-look range after
+// direct mouse input stops. Keep direct input within that range so it reaches
+// the controller's full vertical travel without overshooting and snapping back.
+static constexpr float FREE_LOOK_MIN_PITCH = -1.57079633f;
+static constexpr float FREE_LOOK_MAX_PITCH = 1.57079633f;
+
+static void FreeLookPitchBounds(float observed_min, float observed_max, float* min_pitch,
+                                float* max_pitch) {
+    (void)observed_min;
+    (void)observed_max;
+    // These fields are transition hints rather than the effective player-camera
+    // limits. Narrow values stop mouse look early; wider values snap back.
+    *min_pitch = FREE_LOOK_MIN_PITCH;
+    *max_pitch = FREE_LOOK_MAX_PITCH;
+}
 
 // The guest image is allocated as one of these direct-memory regions on the
 // Windows runtime. Restrict the AOB search to these committed candidates so a
@@ -460,10 +475,10 @@ void BloodborneCam::OnMouseMotion(float xrel, float yrel) {
                         float monoPitch = ReadMem<float>(p3 + 0x148) + deltaPitch * 0.5f;
                         float monoYaw = ReadMem<float>(p3 + 0x14C) + deltaYaw * 0.5f;
 
-                        if (monoPitch > 1.71f) {
-                            monoPitch = 1.71f;
-                        } else if (monoPitch < -1.94f) {
-                            monoPitch = -1.94f;
+                        if (monoPitch > FREE_LOOK_MAX_PITCH) {
+                            monoPitch = FREE_LOOK_MAX_PITCH;
+                        } else if (monoPitch < FREE_LOOK_MIN_PITCH) {
+                            monoPitch = FREE_LOOK_MIN_PITCH;
                         }
 
                         while (monoYaw > 3.14159265f) {
@@ -487,12 +502,9 @@ void BloodborneCam::OnMouseMotion(float xrel, float yrel) {
 
     curPitch += deltaPitch;
 
-    float minPitch = ReadMemFast<float>(pitch + 0x1F0);
-    float maxPitch = ReadMemFast<float>(pitch + 0x1EC);
-    if (minPitch >= maxPitch || minPitch < -3.0f || maxPitch > 3.0f) {
-        minPitch = -1.94f;
-        maxPitch = 1.71f;
-    }
+    float minPitch, maxPitch;
+    FreeLookPitchBounds(ReadMemFast<float>(pitch + 0x1F0), ReadMemFast<float>(pitch + 0x1EC),
+                        &minPitch, &maxPitch);
     if (curPitch > maxPitch) {
         curPitch = maxPitch;
     } else if (curPitch < minPitch) {

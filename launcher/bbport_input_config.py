@@ -146,44 +146,40 @@ DEFAULT_INPUT_INI = '''\
 # F7 toggles the mouse, F8 reloads this file.
 
 # Keyboard
-cross = space
-circle = lshift
-square = e
-triangle = v
+cross = e
+circle = space
+circle = q
+square = f
+triangle = r
 l1 = 1
 r1 = 3
-l2 = r
-r2 = f
-l3 = z
-r3 = q
+l2 = t
+r2 = y
+l3 = x
 r3 = c
-options = enter
-pad_up = i
-pad_down = k
-pad_left = j
-pad_right = l
-touchpad_left = tab
-touchpad_right = backspace
+options = escape
+pad_up = up
+pad_down = down
+pad_left = left
+pad_right = right
+touchpad_left = g
+touchpad_right = tab
 
 axis_left_x_minus = a
 axis_left_x_plus = d
 axis_left_y_minus = w
 axis_left_y_plus = s
-axis_right_x_minus = left
-axis_right_x_plus = right
-axis_right_y_minus = up
-axis_right_y_plus = down
 
-# Hold to halve the left stick (walk): uncomment and pick a key
-# leftjoystick_halfmode = lalt
+# Hold to halve the left stick (walk)
+leftjoystick_halfmode = lalt
 
 # Mouse (uncomment mouse_to_joystick to turn it on; buttons work only while captured)
 # mouse_to_joystick = right
 mouse_movement_params = 0.5, 1, 0.125
 r1 = leftbutton
-r2 = rightbutton
-circle = sidebuttonback
-square = sidebuttonforward
+l2 = rightbutton
+r2 = sidebuttonback
+l1 = sidebuttonforward
 
 # Controller
 cross = cross

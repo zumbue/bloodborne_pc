@@ -29,17 +29,17 @@ class InputDefaultsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / 'input.ini'
             bindings, lines, _toggle, _reload, mouse = config.load_input_ini(path)
-            self.assertEqual(bindings['cross'], ['space'])
+            self.assertEqual(bindings['cross'], ['e'])
             first = {key: (values[0] if values else None) for key, values in bindings.items()}
             first['cross'] = 'g'
             config.save_input_ini(path, first, lines)
             mouse['enabled'] = True
             config.save_mouse_settings(path, mouse, config.load_input_ini(path)[1])
             text = path.read_text(encoding='utf-8')
-        for line in ('cross = g', 'cross = cross', 'axis_left_x = axis_left_x', 'circle = lshift',
+        for line in ('cross = g', 'cross = cross', 'axis_left_x = axis_left_x', 'circle = space',
                      'mouse_to_joystick = right'):
             self.assertIn(line + '\n', text)
-        self.assertNotIn('cross = space\n', text)
+        self.assertNotIn('cross = e\n', text)
 
     def test_wheel_binds_to_a_button(self):
         self.assertEqual(config.wheel_to_name(120), 'mousewheelup')

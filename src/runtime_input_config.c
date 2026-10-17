@@ -511,38 +511,34 @@ void input_config_defaults(InputConfig *out) {
 
 #define DEFAULT_KEYBOARD \
 "# Keyboard\n" \
-"cross = space\n" \
-"circle = lshift\n" \
-"square = e\n" \
-"triangle = v\n" \
+"cross = e\n" \
+"circle = space\n" \
+"circle = q\n" \
+"square = f\n" \
+"triangle = r\n" \
 "l1 = 1\n" \
 "r1 = 3\n" \
-"l2 = r\n" \
-"r2 = f\n" \
-"l3 = z\n" \
-"r3 = q\n" \
+"l2 = t\n" \
+"r2 = y\n" \
+"l3 = x\n" \
 "r3 = c\n" \
-"options = enter\n" \
-"pad_up = i\n" \
-"pad_down = k\n" \
-"pad_left = j\n" \
-"pad_right = l\n" \
-"touchpad_left = tab\n" \
-"touchpad_right = backspace\n" \
+"options = escape\n" \
+"pad_up = up\n" \
+"pad_down = down\n" \
+"pad_left = left\n" \
+"pad_right = right\n" \
+"touchpad_left = g\n" \
+"touchpad_right = tab\n" \
 "\n" \
 "axis_left_x_minus = a\n" \
 "axis_left_x_plus = d\n" \
 "axis_left_y_minus = w\n" \
 "axis_left_y_plus = s\n" \
-"axis_right_x_minus = left\n" \
-"axis_right_x_plus = right\n" \
-"axis_right_y_minus = up\n" \
-"axis_right_y_plus = down\n" \
 "\n"
 
 #define DEFAULT_HALFMODE \
-"# Hold to halve the left stick (walk): uncomment and pick a key\n" \
-"# leftjoystick_halfmode = lalt\n" \
+"# Hold to halve the left stick (walk)\n" \
+"leftjoystick_halfmode = lalt\n" \
 "\n"
 
 #define DEFAULT_MOUSE \
@@ -552,9 +548,9 @@ void input_config_defaults(InputConfig *out) {
 
 #define DEFAULT_MOUSE_BUTTONS \
 "r1 = leftbutton\n" \
-"r2 = rightbutton\n" \
-"circle = sidebuttonback\n" \
-"square = sidebuttonforward\n" \
+"l2 = rightbutton\n" \
+"r2 = sidebuttonback\n" \
+"l1 = sidebuttonforward\n" \
 "\n"
 
 #define DEFAULT_CONTROLLER \
