@@ -20,12 +20,17 @@ jobs:
         with:
           submodules: recursive
 
+      # python.org Python: package.sh freezes the launcher with PyInstaller. MSYS2's Python is not used.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - uses: msys2/setup-msys2@v2
         with:
           msystem: CLANG64
           update: true
           install: >-
-            git patch
+            git patch curl perl
             mingw-w64-clang-x86_64-toolchain
             mingw-w64-clang-x86_64-cmake
             mingw-w64-clang-x86_64-ninja
@@ -51,15 +56,30 @@ jobs:
             mingw-w64-clang-x86_64-miniupnpc
             mingw-w64-clang-x86_64-nlohmann-json
 
-      - run: bash build.sh
+      - name: FSR 4 assets
+        run: bash tools/fetch_fsr4_assets.sh
+
+      - name: Build
+        run: bash build.sh
+
+      # Same SDK files the 1.9 player zip ships: bbport_dlss.dll, nvngx_dlss.dll, nvngx_dlssg.dll.
+      - name: DLSS bridge
+        run: |
+          git clone --depth 1 --branch v310.9.1 https://github.com/NVIDIA/DLSS.git out/dlss-sdk
+          DLSS_SDK_ROOT="$PWD/out/dlss-sdk" bash packaging/windows/build_dlss.sh
+
+      - name: Package Bloodborne-Windows.zip
+        run: |
+          winpy=$(cygpath -u "$pythonLocation")/python.exe
+          test -x "$winpy"
+          WINPYTHON="$winpy" bash packaging/windows/package.sh
+          cp -f dist/bbport-windows.zip dist/Bloodborne-Windows.zip
+          "$winpy" packaging/windows/check_zip.py dist/Bloodborne-Windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: bbport-windows-${{ github.sha }}
-          path: |
-            out/bb-probe.exe
-            out/bb-gpu-capabilities.exe
-            out/bb-play.exe
+          name: Bloodborne-Windows
+          path: dist/Bloodborne-Windows.zip
           if-no-files-found: error
 
       - name: Publish Windows release
@@ -69,7 +89,5 @@ jobs:
           name: Windows camera + mouse ${{ github.ref_name }}
           generate_release_notes: true
           prerelease: true
-          files: |
-            out/bb-probe.exe
-            out/bb-gpu-capabilities.exe
-            out/bb-play.exe
+          fail_on_unmatched_files: true
+          files: dist/Bloodborne-Windows.zip
