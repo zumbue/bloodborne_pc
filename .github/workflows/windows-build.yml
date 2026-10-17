@@ -66,6 +66,10 @@ jobs:
       - name: DLSS bridge
         run: |
           git clone --depth 1 --branch v310.9.1 https://github.com/NVIDIA/DLSS.git out/dlss-sdk
+          # The image cmake knows the Visual Studio that windows-latest actually ships.
+          if [[ -x "/c/Program Files/CMake/bin/cmake.exe" ]]; then
+            export CMAKE_EXE="/c/Program Files/CMake/bin/cmake.exe"
+          fi
           DLSS_SDK_ROOT="$PWD/out/dlss-sdk" bash packaging/windows/build_dlss.sh
 
       - name: Package Bloodborne-Windows.zip
