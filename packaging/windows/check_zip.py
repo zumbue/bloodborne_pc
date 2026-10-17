@@ -28,6 +28,7 @@ need = [
     "bbport-windows/launcher/bloodborne.ico",
     "bbport-windows/fsr4_shaders/rcas.spv",
     "bbport-windows/fsr4_shaders/LICENSE-FSR4-v07.txt",
+    "bbport-windows/builtin_mods/kbm_icons/dvdroot_ps4/menu/common.tpf.dcx",
 ]
 missing = [name for name in need if name not in names]
 opt = [name for name in names if name.startswith("bbport-windows/fsr4_shaders/opt/")]

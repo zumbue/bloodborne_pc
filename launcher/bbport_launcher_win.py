@@ -40,11 +40,11 @@ PATCH_VERSION = '01.09'
 MAX_LOG_LINES = 6000
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 # This build; GitHub release tags are windows-v<VERSION>.
-VERSION = '1.9'
+VERSION = '1.0.2'
 # Co-op: the community server that answers the game's own server requests.
 COMMUNITY_SERVER = 'https://thehuntersdream.com'
-RELEASES_API = 'https://api.github.com/repos/Supermedo/bloodborne_pc/releases/latest'
-RELEASES_PAGE = 'https://github.com/Supermedo/bloodborne_pc/releases/latest'
+RELEASES_API = 'https://api.github.com/repos/zumbue/bloodborne_pc/releases?per_page=20'
+RELEASES_PAGE = 'https://github.com/zumbue/bloodborne_pc/releases'
 UPDATE_DIR = Path(tempfile.gettempdir()) / 'bbport-update'
 # Never copied over an installation by an update (the package does not hold them either).
 USER_FILES = ('user', 'out', 'mods', 'bbport.ini', 'input.ini', 'mods.json', 'patches.json', 'last_run.log')
@@ -205,7 +205,8 @@ APP_DEFAULTS = {'ui_language': '', 'game_dir': str(PORT_DIR.parent / 'CUSA03173'
                 'fps_mode': 'uncap', 'frame_cap': '', 'draw_pipe': '', 'readbacks': '',
                 'frames_ahead': '', 'frame_stats': False, 'gpu_profile': False,
                 'vk_validation': False, 'extra_env': '', 'close_on_play': False,
-                'check_updates': True, 'online': False, 'online_server': 'srv.shadps4.net:31313',
+                'check_updates': True, 'button_icons': 'kbm', 'online': False,
+                'online_server': 'srv.shadps4.net:31313',
                 'online_webapi': '', 'online_npid': '', 'online_password': '', 'online_upnp': True,
                 'online_community': COMMUNITY_SERVER, 'online_pool': 'shadnet', 'bridge_live_map': False,
                 'supermedo_user': '', 'supermedo_password': '', 'thd_online_id': '', 'thd_token': ''}
@@ -471,6 +472,7 @@ def game_environment(s):
     env['BB_MODS_DIR'] = s['mods_dir'] or str(DATA_DIR / 'mods')
     env['BB_MODS_CONFIG'] = str(DATA_DIR / 'mods.json')
     env['BB_MODS_ENABLED'] = '1' if s['mods_enabled'] else '0'
+    env['BB_BUTTON_ICONS'] = s.get('button_icons') or 'kbm'
     env['BB_PATCHES_DIR'] = s['patches_dir'] or str(DATA_DIR / 'patches')
     env['BB_PATCHES_CONFIG'] = str(DATA_DIR / 'patches.json')
     env['BB_LANGUAGE'] = s['language']
@@ -1499,6 +1501,15 @@ class Launcher:
             self.remap_rows[output] = key_label
             self.refresh_remap_row(output)
 
+        self.section(f, _('In-game button icons', 'Значки кнопок в игре'), top=4)
+        self.row(f, _('Shown in the game', 'В игре'), self.choice(f, 'button_icons', 'app', [
+            ('kbm', ('Keyboard and mouse', 'Клавиатура и мышь')),
+            ('pad', ('Gamepad, as in the game', 'Геймпад, как в игре')),
+        ], width=28))
+        self.note(f, _('Which prompts the game draws. Keyboard and mouse is the default. '
+                       'Applied when the game starts.',
+                       'Какие подсказки рисует игра. По умолчанию — клавиатура и мышь. '
+                       'Применяется при запуске.'), top=2)
         self.section(f, _('Buttons', 'Кнопки'), top=4)
         for output in BUTTON_OUTPUTS:
             add_row(f, output)
@@ -2328,15 +2339,31 @@ def version_tuple(text):
 
 
 def latest_release():
-    """(version, zip URL, page URL) of the newest GitHub release."""
+    """(version, zip URL, page URL) of the newest windows-v release, including prereleases.
+
+    /releases/latest skips prereleases, and this port publishes windows-v* that way.
+    """
     request = urllib.request.Request(RELEASES_API, headers={'Accept': 'application/vnd.github+json',
                                                             'User-Agent': 'bbport-launcher'})
     with urllib.request.urlopen(request, timeout=15) as response:
-        release = json.load(response)
-    version = '.'.join(re.findall(r'\d+', release['tag_name']))
-    url = next((asset['browser_download_url'] for asset in release.get('assets', [])
-                if asset.get('name', '').lower().endswith('.zip')), None)
-    return version, url, release.get('html_url') or RELEASES_PAGE
+        releases = json.load(response)
+    if not isinstance(releases, list):
+        raise ValueError('no releases')
+    best = None
+    for release in releases:
+        tag = release.get('tag_name') or ''
+        if not tag.startswith('windows-v'):
+            continue
+        url = next((asset['browser_download_url'] for asset in release.get('assets', [])
+                    if str(asset.get('name', '')).lower().endswith('.zip')), None)
+        if not url:
+            continue
+        version = '.'.join(re.findall(r'\d+', tag))
+        if best is None or version_tuple(version) > version_tuple(best[0]):
+            best = (version, url, release.get('html_url') or RELEASES_PAGE)
+    if best is None:
+        raise ValueError('no Windows release')
+    return best
 
 
 def install_update(target, wait_pid):

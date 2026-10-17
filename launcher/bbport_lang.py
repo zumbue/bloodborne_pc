@@ -1216,6 +1216,12 @@ from bbport_lang_more import MORE, MORE_KEYS  # noqa: E402 (texts added later, R
 
 EXTRA_TRANSLATIONS = {
     'pt': {
+        'In-game button icons': 'Ícones dos botões no jogo',
+        'Shown in the game': 'Mostrados no jogo',
+        'Keyboard and mouse': 'Teclado e mouse',
+        'Gamepad, as in the game': 'Controle, como no jogo',
+        'Which prompts the game draws. Keyboard and mouse is the default. Applied when the game starts.':
+            'Quais botões o jogo mostra. Teclado e mouse é o padrão. Vale ao iniciar o jogo.',
         'Text language': 'Idioma dos textos',
         'Voice language': 'Idioma da dublagem',
         'As in the game uses the original voice setting; other choices use available tracks.':

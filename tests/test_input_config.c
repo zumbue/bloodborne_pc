@@ -289,9 +289,10 @@ static void TestDefaultTextParsesCleanly(void) {
     InputConfig cfg;
     input_config_parse(&cfg, input_config_default_text());
     assert(cfg.warnings == 0);
-    assert(HasKeyBinding(&cfg, OUT_CROSS, SDL_SCANCODE_SPACE));
+    assert(HasKeyBinding(&cfg, OUT_CROSS, SDL_SCANCODE_E));
     assert(HasCButtonBinding(&cfg, OUT_CROSS, SDL_GAMEPAD_BUTTON_SOUTH));
-    assert(cfg.mouse.stick == 0); /* mouse_to_joystick left commented out */
+    assert(cfg.mouse.stick == 2); /* mouse_to_joystick = right */
+    assert(cfg.mouse.camera_direct == 1);
     assert(cfg.toggle_scancode == SDL_SCANCODE_F7);
     assert(cfg.reload_scancode == SDL_SCANCODE_F8);
 }

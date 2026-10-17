@@ -542,8 +542,9 @@ void input_config_defaults(InputConfig *out) {
 "\n"
 
 #define DEFAULT_MOUSE \
-"# Mouse (uncomment mouse_to_joystick to turn it on; buttons work only while captured)\n" \
-"# mouse_to_joystick = right\n" \
+"# Mouse. mouse_camera = direct is the port camera; stick keeps joystick emulation.\n" \
+"mouse_to_joystick = right\n" \
+"mouse_camera = direct\n" \
 "mouse_movement_params = 0.5, 1, 0.125\n"
 
 #define DEFAULT_MOUSE_BUTTONS \

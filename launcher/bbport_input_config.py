@@ -173,8 +173,9 @@ axis_left_y_plus = s
 # Hold to halve the left stick (walk)
 leftjoystick_halfmode = lalt
 
-# Mouse (uncomment mouse_to_joystick to turn it on; buttons work only while captured)
-# mouse_to_joystick = right
+# Mouse. mouse_camera = direct is the port camera; stick keeps joystick emulation.
+mouse_to_joystick = right
+mouse_camera = direct
 mouse_movement_params = 0.5, 1, 0.125
 r1 = leftbutton
 l2 = rightbutton
@@ -209,7 +210,7 @@ hotkey_reload_inputs = f8
 '''
 
 # shadPS4/bbport defaults when mouse_movement_params is absent (spec section 4.2 / 4.3).
-MOUSE_SETTINGS_DEFAULTS = {'enabled': False, 'stick': 'right',
+MOUSE_SETTINGS_DEFAULTS = {'enabled': True, 'stick': 'right',
                             'deadzone_offset': 0.5, 'speed': 1.0, 'speed_offset': 0.125}
 
 
@@ -360,4 +361,8 @@ def save_mouse_settings(path, settings, lines):
     if not written_params:
         out.append('mouse_movement_params = {:.3g}, {:.3g}, {:.3g}'.format(
             settings['deadzone_offset'], settings['speed'], settings['speed_offset']))
+    # Turning the mouse on from an older file also selects the direct camera. A file that
+    # already chose direct or stick is left as it is.
+    if settings['enabled'] and not any(line.lstrip().startswith('mouse_camera') for line in out):
+        out.append('mouse_camera = direct')
     Path(path).write_text('\n'.join(out) + '\n', encoding='utf-8')

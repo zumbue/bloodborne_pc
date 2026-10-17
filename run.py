@@ -233,7 +233,13 @@ def main():
     mod_args = [game, '--out', out, '--mods-dir', env.get('BB_MODS_DIR', data / 'mods'),
                 '--config', env.get('BB_MODS_CONFIG', data / 'mods.json'),
                 '--enabled', env.get('BB_MODS_ENABLED', '1')]
-    view = run_script('mods.py', *mod_args, '--layer', text_layer, '--layer', hud_layer,
+    # builtin_mods/kbm_icons: keyboard and mouse prompts. Below the player's mods, so one of
+    # theirs still replaces common.tpf.dcx. BB_BUTTON_ICONS=pad keeps the game's own pictures.
+    icon_args = []
+    icons = PORT / 'builtin_mods' / 'kbm_icons'
+    if env.get('BB_BUTTON_ICONS', 'kbm') != 'pad' and icons.is_dir():
+        icon_args = ['--layer', icons]
+    view = run_script('mods.py', *mod_args, *icon_args, '--layer', text_layer, '--layer', hud_layer,
                       capture=True, optional=True)
     if view is None:
         # The game view could not be made with the port's own layers (Quit to Desktop's texts,
@@ -241,7 +247,7 @@ def main():
         print('Mods: the game view could not be made; starting without Quit to Desktop and the '
               'HUD layout')
         env['BB_QUIT_TO_DESKTOP'] = '0'
-        view = run_script('mods.py', *mod_args, capture=True)
+        view = run_script('mods.py', *mod_args, *icon_args, capture=True)
     game = Path(view.strip())
     mod_view = game if game.resolve() != original_game else None
     try:
