@@ -18,9 +18,10 @@ if [[ -z ${CMAKE_GENERATOR:-} ]]; then
             -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
             -property catalog_productLineVersion | tr -d '\r' || true)
     fi
+    # catalog_productLineVersion is the year on VS 2022 ("2022") and the major on VS 2026 ("18").
     case $ver in
-        2026) CMAKE_GENERATOR="Visual Studio 18 2026" ;;
-        2022) CMAKE_GENERATOR="Visual Studio 17 2022" ;;
+        18|2026) CMAKE_GENERATOR="Visual Studio 18 2026" ;;
+        17|2022) CMAKE_GENERATOR="Visual Studio 17 2022" ;;
         "") echo "vswhere did not report a Visual Studio with the C++ tools" >&2; exit 1 ;;
         *) echo "Unsupported Visual Studio product line: $ver" >&2; exit 1 ;;
     esac
