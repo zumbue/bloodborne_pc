@@ -413,8 +413,8 @@ def combo_value(row):
 CONTROLS = [
     ("cross", "Крест", "E", "a"),
     ("circle", "Круг", "Space, Q", "b"),
-    ("square", "Квадрат", "R", "x"),
-    ("triangle", "Треугольник", "F", "y"),
+    ("square", "Квадрат", "F", "x"),
+    ("triangle", "Треугольник", "R", "y"),
     ("l1", "L1", "Shift+Left, Shift+Mouse Right, Mouse X2", "leftshoulder"),
     ("r1", "R1", "Shift+Right, Mouse Left", "rightshoulder"),
     ("l2", "L2", "Shift+Up, Mouse Right", "lefttrigger"),

@@ -32,7 +32,7 @@ KEYS = {
     'menu_right': 'ARROW RIGHT',
     'forward': 'W', 'backward': 'S', 'left': 'A', 'right': 'D',
     'r1': 'Left Click', 'r2': 'SHIFT LEFT CLICK', 'l1': 'SHIFT RIGHT CLICK', 'l2': 'Right Click',
-    'triangle': 'F', 'circle': 'SPACE', 'square': 'R', 'cross': 'E',
+    'triangle': 'R', 'circle': 'SPACE', 'square': 'F', 'cross': 'E',
     'r3': 'Middle Click', 'l3': 'X', 'touchpad_left': 'G', 'touchpad_right': 'TAB',
     'options': 'ESCAPE',
 }

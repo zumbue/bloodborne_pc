@@ -3,7 +3,7 @@
  *
  * Keyboard layout, as Dark Souls 3 on PC (also with a gamepad connected: both drive the game):
  *   WASD left stick (Left Alt held: walk), the mouse the right stick, arrow keys d-pad,
- *   Space and Q Circle (dodge, run, back), E Cross, R Square, F Triangle, X L3, C R3,
+ *   Space and Q Circle (dodge, run, back), E Cross, F Square, R Triangle, X L3, C R3,
  *   Esc Options, G left touchpad (gestures), Tab right touchpad, Shift+arrows the menus' L1
  *   (left), R1 (right), L2 (up), R2 (down).
  *   Mouse: while looking, Left is R1, Shift+Left R2, Right L2, Shift+Right L1, Middle R3, side
@@ -319,7 +319,7 @@ static int bindings_ready;
 static void bind_defaults(void) {
     static const struct { int input; int key; } keys[]={
         {IN_CROSS,SDL_SCANCODE_E}, {IN_CIRCLE,SDL_SCANCODE_SPACE}, {IN_CIRCLE,SDL_SCANCODE_Q},
-        {IN_SQUARE,SDL_SCANCODE_R}, {IN_TRIANGLE,SDL_SCANCODE_F},
+        {IN_SQUARE,SDL_SCANCODE_F}, {IN_TRIANGLE,SDL_SCANCODE_R},
         {IN_L1,KEY_SHIFT|SDL_SCANCODE_LEFT}, {IN_R1,KEY_SHIFT|SDL_SCANCODE_RIGHT},
         {IN_L2,KEY_SHIFT|SDL_SCANCODE_UP}, {IN_R2,KEY_SHIFT|SDL_SCANCODE_DOWN},
         {IN_L3,SDL_SCANCODE_X}, {IN_R3,SDL_SCANCODE_C},
