@@ -75,15 +75,29 @@ cp gpu/third_party/httplib/LICENSE "$dest/licenses/cpp-httplib-LICENSE.txt"
 cp packaging/windows/licenses/*.txt "$dest/licenses/"
 # Where the online code comes from (shadPS4 0.20, Awaken's port, bbhost's protocol).
 cp gpu/bbnet/SHADNET-PORT.md "$dest/licenses/online-code-NOTICE.md"
+# These notices are optional. On CI, MSYS cp often cannot stat a /clang64 license that
+# bash itself can see; a missing notice must not throw away the player zip.
 for package in protobuf abseil-cpp openssl miniupnpc zlib; do
     license=/clang64/share/licenses/$package/LICENSE
-    if [[ -f $license ]]; then cp "$license" "$dest/licenses/$package-LICENSE.txt"; fi
+    if [[ -f $license ]]; then
+        MSYS2_ARG_CONV_EXCL='*' cp -fL -- "$license" "$dest/licenses/$package-LICENSE.txt" \
+            || echo "warning: skipped unreadable license $license" >&2
+    fi
 done
 find "$dest" -name __pycache__ -prune -exec rm -r {} +
 mkdir -p dist
 rm -f dist/bbport-windows.zip
-(cd out/stage && powershell -NoProfile -Command \
-    "Compress-Archive -Path bbport-windows -DestinationPath ../../dist/bbport-windows.zip")
+# Windows Python writes the zip. PowerShell's Compress-Archive is not on the CI MSYS path.
+out/pyenv/Scripts/python.exe -c 'import os, zipfile
+root = os.path.join("out", "stage", "bbport-windows")
+dest = os.path.join("dist", "bbport-windows.zip")
+with zipfile.ZipFile(dest, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+    for dirpath, _, filenames in os.walk(root):
+        for name in filenames:
+            full = os.path.join(dirpath, name)
+            rel = os.path.relpath(full, os.path.join("out", "stage"))
+            archive.write(full, rel.replace("/", "\\"))
+print("wrote", dest, os.path.getsize(dest))'
 
 # Refresh dist/bbport-windows, keeping what players create there (saves, settings, mods), and
 # only while nothing runs from it: deleting a running launcher's files breaks it.
